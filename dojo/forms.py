@@ -1092,6 +1092,7 @@ class AddFindingForm(forms.ModelForm):
     impact = forms.CharField(widget=forms.Textarea, required=False)
     request = forms.CharField(widget=forms.Textarea, required=False)
     response = forms.CharField(widget=forms.Textarea, required=False)
+    rr_count = 1
     endpoints = forms.ModelMultipleChoiceField(Endpoint.objects.none(), required=False, label="Systems / Endpoints")
     endpoints_to_add = forms.CharField(max_length=5000, required=False, label="Endpoints to add",
                                help_text="The IP address, host name or full URL. You may enter one endpoint per line. "
@@ -1309,8 +1310,9 @@ class FindingForm(forms.ModelForm):
             "invalid_choice": "Select valid choice: Critical,High,Medium,Low"})
     mitigation = forms.CharField(widget=forms.Textarea, required=False)
     impact = forms.CharField(widget=forms.Textarea, required=False)
-    request = forms.CharField(widget=forms.Textarea, required=False)
-    response = forms.CharField(widget=forms.Textarea, required=False)
+    # request = forms.CharField(widget=forms.Textarea, required=False)
+    # response = forms.CharField(widget=forms.Textarea, required=False)
+    rr_count = 0
     endpoints = forms.ModelMultipleChoiceField(queryset=Endpoint.objects.none(), required=False, label="Systems / Endpoints")
     endpoints_to_add = forms.CharField(max_length=5000, required=False, label="Endpoints to add",
                                help_text="The IP address, host name or full URL. You may enter one endpoint per line. "
@@ -1362,8 +1364,24 @@ class FindingForm(forms.ModelForm):
 
         # self.fields['tags'].widget.choices = t
         if req_resp:
-            self.fields["request"].initial = req_resp[0]
-            self.fields["response"].initial = req_resp[1]
+            self.rr_count = len(req_resp)
+            for i in range(self.rr_count):
+                self.fields[f'request_{i}'] = forms.CharField(
+                widget=forms.Textarea,
+                required=False,
+                label=f'Request {i + 1}',
+                help_text=f'Request {i + 1}'
+                )
+
+                self.fields[f'response_{i}'] = forms.CharField(
+                    widget=forms.Textarea,
+                    required=False,
+                    label=f'Response {i + 1}',
+                    help_text=f'Response {i + 1}'
+                )
+
+                self.fields[f'request_{i}'].initial = req_resp[i].get_request()
+                self.fields[f'response_{i}'].initial = req_resp[i].get_response()
 
         if self.instance.duplicate:
             self.fields["duplicate"].help_text = "Original finding that is being duplicated here (readonly). Use view finding page to manage duplicate relationships. Unchecking duplicate here will reset this findings duplicate status, but will trigger deduplication logic."
@@ -1401,6 +1419,16 @@ class FindingForm(forms.ModelForm):
         if cleaned_data["active"] and "risk_accepted" in cleaned_data and cleaned_data["risk_accepted"]:
             msg = "Active findings cannot be risk accepted."
             raise forms.ValidationError(msg)
+        
+        for i in range(self.rr_count):
+            request = cleaned_data.get(f'request_{i}')
+            response = cleaned_data.get(f'response_{i}')
+
+            # Custom validation for each request/response pair
+            if request and not response:
+                self.add_error(f'response_{i}', f'Response {i + 1} is required if Request {i + 1} is provided.')
+            if response and not request:
+                self.add_error(f'request_{i}', f'Request {i + 1} is required if Response {i + 1} is provided.')
 
         endpoints_to_add_list, errors = validate_endpoints_to_add(cleaned_data["endpoints_to_add"])
         if errors:

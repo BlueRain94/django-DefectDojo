@@ -804,13 +804,19 @@ class ViewFinding(View):
 
 class EditFinding(View):
     def get_finding(self, finding_id: int):
-        return get_object_or_404(Finding, id=finding_id)
+        finding_qs = prefetch_for_findings(Finding.objects.all(), exclude_untouched=False)
+        return get_object_or_404(finding_qs, id=finding_id)
+
+    # def get_request_response(self, finding: Finding):
+    #     req_resp = None
+    #     if burp_rr := BurpRawRequestResponse.objects.filter(finding=finding).first():
+    #         req_resp = (burp_rr.get_request(), burp_rr.get_response())
+
+    #     return req_resp
 
     def get_request_response(self, finding: Finding):
         req_resp = None
-        if burp_rr := BurpRawRequestResponse.objects.filter(finding=finding).first():
-            req_resp = (burp_rr.get_request(), burp_rr.get_response())
-
+        req_resp = BurpRawRequestResponse.objects.filter(finding=finding).all()
         return req_resp
 
     def get_finding_form(self, request: HttpRequest, finding: Finding):
@@ -825,7 +831,7 @@ class EditFinding(View):
             "can_edit_mitigated_data": finding_helper.can_edit_mitigated_data(request.user),
             "initial": {"vulnerability_ids": "\n".join(finding.vulnerability_ids)},
         }
-
+        
         return FindingForm(*args, **kwargs)
 
     def get_jira_form(self, request: HttpRequest, finding: Finding, finding_form: FindingForm = None):
@@ -960,20 +966,61 @@ class EditFinding(View):
                     fp.is_mitigated = finding.is_mitigated
                     fp.save_no_options()
 
-    def process_burp_request_response(self, finding: Finding, context: dict):
-        if "request" in context["form"].cleaned_data or "response" in context["form"].cleaned_data:
-            try:
-                burp_rr, _ = BurpRawRequestResponse.objects.get_or_create(finding=finding)
-            except BurpRawRequestResponse.MultipleObjectsReturned:
-                burp_rr = BurpRawRequestResponse.objects.filter(finding=finding).first()
-            burp_rr.burpRequestBase64 = base64.b64encode(
-                context["form"].cleaned_data["request"].encode(),
-            )
-            burp_rr.burpResponseBase64 = base64.b64encode(
-                context["form"].cleaned_data["response"].encode(),
-            )
-            burp_rr.clean()
-            burp_rr.save()
+    # def process_burp_request_response(self, finding: Finding, context: dict):
+    #     if "request" in context["form"].cleaned_data or "response" in context["form"].cleaned_data:
+    #         try:
+    #             burp_rr, _ = BurpRawRequestResponse.objects.get_or_create(finding=finding)
+    #         except BurpRawRequestResponse.MultipleObjectsReturned:
+    #             burp_rr = BurpRawRequestResponse.objects.filter(finding=finding).first()
+    #         burp_rr.burpRequestBase64 = base64.b64encode(
+    #             context["form"].cleaned_data["request"].encode(),
+    #         )
+    #         burp_rr.burpResponseBase64 = base64.b64encode(
+    #             context["form"].cleaned_data["response"].encode(),
+    #         )
+    #         burp_rr.clean()
+    #         burp_rr.save()
+
+    def process_burp_request_response(self, request: HttpRequest, finding: Finding, context: dict):
+        request_fields = [key for key in request.POST if key.startswith("request_")]
+        request_rr_count = len(request_fields)
+        database_rr_count = context["form"].rr_count
+        if request_rr_count > 0:
+            burp_rr = BurpRawRequestResponse.objects.filter(finding=finding).all()
+            for i, rr in enumerate(burp_rr):
+                rr.burpRequestBase64 = base64.b64encode(
+                    context["form"].cleaned_data[f"request_{i}"].encode(),
+                )
+                rr.burpResponseBase64 = base64.b64encode(
+                    context["form"].cleaned_data[f"response_{i}"].encode(),
+                )
+                rr.clean()
+                rr.save()
+
+            for i in range(request_rr_count-database_rr_count):
+                j = database_rr_count + i
+                burp_rr = BurpRawRequestResponse.objects.create(finding=finding)
+                burp_rr.burpRequestBase64 = base64.b64encode(
+                    request.POST[f"request_{j}"].encode(),
+                )
+                burp_rr.burpResponseBase64 = base64.b64encode(
+                    request.POST[f"response_{j}"].encode(),
+                )
+                burp_rr.clean()
+                burp_rr.save()
+            # else:
+            #     try:
+            #         burp_rr, _ = BurpRawRequestResponse.objects.get_or_create(finding=finding)
+            #     except BurpRawRequestResponse.MultipleObjectsReturned:
+            #         burp_rr = BurpRawRequestResponse.objects.filter(finding=finding).first()
+            #     burp_rr.burpRequestBase64 = base64.b64encode(
+            #         context["form"].cleaned_data["request"].encode(),
+            #     )
+            #     burp_rr.burpResponseBase64 = base64.b64encode(
+            #         context["form"].cleaned_data["response"].encode(),
+            #     )
+            #     burp_rr.clean()
+            #     burp_rr.save()
 
     def process_finding_form(self, request: HttpRequest, finding: Finding, context: dict):
         if context["form"].is_valid():
@@ -1005,7 +1052,7 @@ class EditFinding(View):
             # Handle some of the other steps
             self.process_mitigated_data(request, new_finding, context)
             self.process_false_positive_history(new_finding)
-            self.process_burp_request_response(new_finding, context)
+            self.process_burp_request_response(request, new_finding, context)
             # Save the vulnerability IDs
             finding_helper.save_vulnerability_ids(new_finding, context["form"].cleaned_data["vulnerability_ids"].split())
             # Add a success message
