@@ -46,6 +46,15 @@
                 <input type="hidden" name="return_url" value="{{ return_url }}" />
             {% endif %}
             {% include "dojo/form_fields.html" with form=form %}
+            <!-- Add placeholder for dynamic fields -->
+            <div id="rr-fields"></div>
+
+            <!-- Add More Button -->
+            <div class="form-group">
+                <div class="col-sm-offset-2 col-sm-10">
+                    <button type="button" id="add-more-fields" class="btn btn-secondary">Add Request/Response</button>
+                </div>
+            </div>
             {% block additional_forms %}
             {% endblock additional_forms %}
             <span id="original_finding" class="small">
@@ -230,5 +239,54 @@
             return isFormValid;
         });
     </script>
+
+<script type="application/javascript">
+    $(document).ready(function () {
+        let formIdx = {{ form.rr_count }};
+
+        // Add More button click handler
+        $('#add-more-fields').click(function (e) {
+            e.preventDefault();
+
+            // Create the new request field
+            let newRequestField = `
+                <div class="form-group">
+                    <label class="col-sm-2 control-label" for="id_request_${formIdx}">Request ${formIdx + 1}
+                        <i class="fa-solid fa-circle-question has-popover" data-trigger="hover" data-content="Request ${formIdx + 1}" data-placement="right" data-container="body" title=""></i>
+                    </label>
+                    <div class="col-sm-10">
+                        <textarea name="request_${formIdx}" cols="40" rows="10" class="form-control" aria-describedby="id_request_${formIdx}_helptext" id="id_request_${formIdx}"></textarea>
+                        <div class="EasyMDEContainer"></div>
+                    </div>
+                </div>
+            `;
+
+            // Create the new response field
+            let newResponseField = `
+                <div class="form-group">
+                    <label class="col-sm-2 control-label" for="id_response_${formIdx}">Response ${formIdx + 1}
+                        <i class="fa-solid fa-circle-question has-popover" data-trigger="hover" data-content="Response ${formIdx + 1}" data-placement="right" data-container="body" title=""></i>
+                    </label>
+                    <div class="col-sm-10">
+                        <textarea name="response_${formIdx}" cols="40" rows="10" class="form-control" aria-describedby="id_response_${formIdx}_helptext" id="id_response_${formIdx}"></textarea>
+                        <div class="EasyMDEContainer"></div>
+                    </div>
+                </div>
+            `;
+
+            // Append the new fields to the dynamic fields container
+            $('#rr-fields').append(newRequestField);
+            $('#rr-fields').append(newResponseField);
+
+            formIdx++;
+        });
+
+        // Other existing JavaScript logic
+        $('[data-toggle="tooltip"]').tooltip();
+        displayMitigated();
+
+        $('#id_active').change(displayMitigated);
+    });
+</script>
 
 {% endblock %}
