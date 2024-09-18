@@ -534,8 +534,8 @@ class FindingForm(CweFormMixin, forms.ModelForm):
             "invalid_choice": "Select valid choice: Critical,High,Medium,Low"})
     mitigation = forms.CharField(widget=forms.Textarea, required=False)
     impact = forms.CharField(widget=forms.Textarea, required=False)
-    request = forms.CharField(widget=forms.Textarea, required=False)
-    response = forms.CharField(widget=forms.Textarea, required=False)
+    # request/response pairs are added dynamically as request_<i>/response_<i> in __init__
+    rr_count = 0
     endpoints = forms.ModelMultipleChoiceField(queryset=Location.objects.none(), required=False, label=_("Systems / Endpoints"))
     endpoints_to_add = forms.CharField(max_length=5000, required=False, label=_("Endpoints to add"),
                                help_text="The IP address, host name or full URL. You may enter one endpoint per line. "
@@ -599,8 +599,22 @@ class FindingForm(CweFormMixin, forms.ModelForm):
 
         # self.fields['tags'].widget.choices = t
         if req_resp:
-            self.fields["request"].initial = req_resp[0]
-            self.fields["response"].initial = req_resp[1]
+            self.rr_count = len(req_resp)
+            for i in range(self.rr_count):
+                self.fields[f"request_{i}"] = forms.CharField(
+                    widget=forms.Textarea,
+                    required=False,
+                    label=f"Request {i + 1}",
+                    help_text=f"Request {i + 1}",
+                )
+                self.fields[f"response_{i}"] = forms.CharField(
+                    widget=forms.Textarea,
+                    required=False,
+                    label=f"Response {i + 1}",
+                    help_text=f"Response {i + 1}",
+                )
+                self.fields[f"request_{i}"].initial = req_resp[i].get_request()
+                self.fields[f"response_{i}"].initial = req_resp[i].get_response()
 
         if self.instance.duplicate:
             self.fields["duplicate"].help_text = "Original finding that is being duplicated here (readonly). Use view finding page to manage duplicate relationships. Unchecking duplicate here will reset this findings duplicate status, but will trigger deduplication logic."
