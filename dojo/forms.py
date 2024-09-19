@@ -1090,8 +1090,8 @@ class AddFindingForm(forms.ModelForm):
             "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
     mitigation = forms.CharField(widget=forms.Textarea, required=False)
     impact = forms.CharField(widget=forms.Textarea, required=False)
-    request = forms.CharField(widget=forms.Textarea, required=False)
-    response = forms.CharField(widget=forms.Textarea, required=False)
+    request_0 = forms.CharField(widget=forms.Textarea, label=f'Request 1', required=False)
+    response_0 = forms.CharField(widget=forms.Textarea, label=f'Response 1', required=False)
     rr_count = 1
     endpoints = forms.ModelMultipleChoiceField(Endpoint.objects.none(), required=False, label="Systems / Endpoints")
     endpoints_to_add = forms.CharField(max_length=5000, required=False, label="Endpoints to add",
@@ -1109,7 +1109,7 @@ class AddFindingForm(forms.ModelForm):
             "invalid_choice": EFFORT_FOR_FIXING_INVALID_CHOICE})
 
     # the only reliable way without hacking internal fields to get predicatble ordering is to make it explicit
-    field_order = ("title", "date", "cwe", "vulnerability_ids", "severity", "cvssv3", "description", "mitigation", "impact", "request", "response", "steps_to_reproduce",
+    field_order = ("title", "date", "cwe", "vulnerability_ids", "severity", "cvssv3", "description", "mitigation", "impact", "steps_to_reproduce",
                    "severity_justification", "endpoints", "endpoints_to_add", "references", "active", "verified", "false_p", "duplicate", "out_of_scope",
                    "risk_accepted", "under_defect_review")
 
@@ -1126,8 +1126,8 @@ class AddFindingForm(forms.ModelForm):
             self.fields["endpoints"].queryset = Endpoint.objects.filter(product=product)
 
         if req_resp:
-            self.fields["request"].initial = req_resp[0]
-            self.fields["response"].initial = req_resp[1]
+            self.fields["request_0"].initial = req_resp[0]
+            self.fields["response_0"].initial = req_resp[1]
 
         self.endpoints_to_add_list = []
 

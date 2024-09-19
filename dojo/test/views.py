@@ -616,14 +616,24 @@ class AddFindingView(View):
             # Push things to jira if needed
             finding.save(push_to_jira=push_to_jira)
             # Save the burp req resp
-            if "request" in context["form"].cleaned_data or "response" in context["form"].cleaned_data:
+            request_fields = [key for key in request.POST if key.startswith("request_")]
+            request_rr_count = len(request_fields)
+            for i in range(request_rr_count):
                 burp_rr = BurpRawRequestResponse(
                     finding=finding,
-                    burpRequestBase64=base64.b64encode(context["form"].cleaned_data["request"].encode()),
-                    burpResponseBase64=base64.b64encode(context["form"].cleaned_data["response"].encode()),
+                    burpRequestBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
+                    burpResponseBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
                 )
                 burp_rr.clean()
                 burp_rr.save()
+            # if "request" in context["form"].cleaned_data or "response" in context["form"].cleaned_data:
+            #     burp_rr = BurpRawRequestResponse(
+            #         finding=finding,
+            #         burpRequestBase64=base64.b64encode(context["form"].cleaned_data["request"].encode()),
+            #         burpResponseBase64=base64.b64encode(context["form"].cleaned_data["response"].encode()),
+            #     )
+            #     burp_rr.clean()
+            #     burp_rr.save()
 
             # Note: this notification has not be moved to "@receiver(post_save, sender=Finding)" method as many other notifications
             # Because it could generate too much noise, we keep it here only for findings created by hand in WebUI

@@ -561,22 +561,22 @@ class ViewFinding(View):
             "cwe_template": cwe_template,
         }
 
-    def get_request_response(self, finding: Finding):
-        request_response = None
-        burp_request = None
-        burp_response = None
-        try:
-            request_response = BurpRawRequestResponse.objects.filter(finding=finding).first()
-            if request_response is not None:
-                burp_request = base64.b64decode(request_response.burpRequestBase64)
-                burp_response = base64.b64decode(request_response.burpResponseBase64)
-        except Exception as e:
-            logger.debug(f"unsuspected error: {e}")
+    # def get_request_response(self, finding: Finding):
+    #     request_response = None
+    #     burp_request = None
+    #     burp_response = None
+    #     try:
+    #         request_response = BurpRawRequestResponse.objects.filter(finding=finding).first()
+    #         if request_response is not None:
+    #             burp_request = base64.b64decode(request_response.burpRequestBase64)
+    #             burp_response = base64.b64decode(request_response.burpResponseBase64)
+    #     except Exception as e:
+    #         logger.debug(f"unsuspected error: {e}")
 
-        return {
-            "burp_request": burp_request,
-            "burp_response": burp_response,
-        }
+    #     return {
+    #         "burp_request": burp_request,
+    #         "burp_response": burp_response,
+    #     }
 
     def get_test_import_data(self, request: HttpRequest, finding: Finding):
         test_imports = Test_Import.objects.filter(findings_affected=finding)
@@ -771,7 +771,7 @@ class ViewFinding(View):
         context |= self.get_credential_objects(finding)
         context |= self.get_cwe_template(finding)
         # Add in more of the other extras
-        context |= self.get_request_response(finding)
+        # context |= self.get_request_response(finding)
         context |= self.get_similar_findings(request, finding)
         context |= self.get_test_import_data(request, finding)
         context |= self.get_jira_data(finding)
@@ -794,7 +794,7 @@ class ViewFinding(View):
         if success:
             return HttpResponseRedirect(reverse("view_finding", args=(finding_id,)))
         # Add in more of the other extras
-        context |= self.get_request_response(finding)
+        # context |= self.get_request_response(finding)
         context |= self.get_similar_findings(request, finding)
         context |= self.get_test_import_data(request, finding)
         context |= self.get_jira_data(finding)
