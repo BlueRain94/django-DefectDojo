@@ -1,4 +1,3 @@
-# #  tests
 import base64
 import logging
 import operator
@@ -753,7 +752,7 @@ def add_temp_finding(request, tid, fid):
             #     )
             #     burp_rr.clean()
             #     burp_rr.save()
-            
+
             # Save the burp req resp
             request_fields = [key for key in request.POST if key.startswith("request_")]
             request_rr_count = len(request_fields)
