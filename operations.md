@@ -1,6 +1,7 @@
-# How to Dev
+# Dev
 - Run:
 ```
+docker compose -f docker-compose.yml -f docker-compose.override.dev.yml build
 docker compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d 
 ```
 
@@ -8,6 +9,14 @@ docker compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d
 ```
 Log Dedubg at django-defectdojo-uwsgi-1 container
 Form prossess at django-DefectDojo\dojo\forms.py
+```
+
+# Prod
+```
+git clone https://github.com/BlueRain94/django-DefectDojo.git
+cd django-DefectDojo
+./dc-build.sh
+./dc-up-d.sh
 ```
 
 # Upgrade
