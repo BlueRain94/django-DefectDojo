@@ -618,7 +618,7 @@ class AddFindingView(View):
                 burp_rr = BurpRawRequestResponse(
                     finding=finding,
                     burpRequestBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
-                    burpResponseBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
+                    burpResponseBase64=base64.b64encode(request.POST[f"response_{i}"].encode()),
                 )
                 burp_rr.clean()
                 burp_rr.save()
@@ -760,7 +760,7 @@ def add_temp_finding(request, tid, fid):
                 burp_rr = BurpRawRequestResponse(
                     finding=new_finding,
                     burpRequestBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
-                    burpResponseBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
+                    burpResponseBase64=base64.b64encode(request.POST[f"response_{i}"].encode()),
                 )
                 burp_rr.clean()
                 burp_rr.save()
