@@ -7,7 +7,6 @@ from datetime import datetime
 from functools import reduce
 from tempfile import NamedTemporaryFile
 from time import strftime
-from typing import List, Optional, Tuple
 
 from django.conf import settings
 from django.contrib import messages
@@ -317,10 +316,7 @@ def edit_engagement(request, eid):
             logger.debug("showing jira-epic-form")
             jira_epic_form = JIRAEngagementForm(instance=engagement)
 
-    if is_ci_cd:
-        title = "Edit CI/CD Engagement"
-    else:
-        title = "Edit Interactive Engagement"
+    title = "Edit CI/CD Engagement" if is_ci_cd else "Edit Interactive Engagement"
 
     product_tab = Product_Tab(engagement.product, title=title, tab="engagements")
     product_tab.setEngagement(engagement)
@@ -428,7 +424,7 @@ class ViewEngagement(View):
     def get_filtered_tests(
         self,
         request: HttpRequest,
-        queryset: List[Test],
+        queryset: list[Test],
         engagement: Engagement,
     ):
         filter_string_matching = get_system_setting("filter_string_matching", False)
@@ -466,10 +462,7 @@ class ViewEngagement(View):
             available_note_types = find_available_notetypes(notes)
         form = DoneForm()
         files = eng.files.all()
-        if note_type_activation:
-            form = TypedNoteForm(available_note_types=available_note_types)
-        else:
-            form = NoteForm()
+        form = TypedNoteForm(available_note_types=available_note_types) if note_type_activation else NoteForm()
 
         creds = Cred_Mapping.objects.filter(
             product=eng.product).select_related("cred_id").order_by("cred_id")
@@ -552,10 +545,7 @@ class ViewEngagement(View):
             new_note.date = timezone.now()
             new_note.save()
             eng.notes.add(new_note)
-            if note_type_activation:
-                form = TypedNoteForm(available_note_types=available_note_types)
-            else:
-                form = NoteForm()
+            form = TypedNoteForm(available_note_types=available_note_types) if note_type_activation else NoteForm()
             title = f"Engagement: {eng.name} on {eng.product.name}"
             messages.add_message(request,
                                  messages.SUCCESS,
@@ -711,9 +701,9 @@ class ImportScanResultsView(View):
     def get_engagement_or_product(
         self,
         user: Dojo_User,
-        engagement_id: Optional[int] = None,
-        product_id: Optional[int] = None,
-    ) -> Tuple[Engagement, Product, Product | Engagement]:
+        engagement_id: int | None = None,
+        product_id: int | None = None,
+    ) -> tuple[Engagement, Product, Product | Engagement]:
         """Using the path parameters, either fetch the product or engagement"""
         engagement = product = engagement_or_product = None
         # Get the product if supplied
@@ -770,7 +760,7 @@ class ImportScanResultsView(View):
         self,
         request: HttpRequest,
         engagement_or_product: Engagement | Product,
-    ) -> Tuple[JIRAImportScanForm | None, bool]:
+    ) -> tuple[JIRAImportScanForm | None, bool]:
         """Returns a JiraImportScanForm if jira is enabled"""
         jira_form = None
         push_all_jira_issues = False
@@ -795,7 +785,7 @@ class ImportScanResultsView(View):
         self,
         product: Product,
         engagement: Engagement,
-    ) -> Tuple[Product_Tab, dict]:
+    ) -> tuple[Product_Tab, dict]:
         """
         Determine how the product tab will be rendered, and what tab will be selected
         as currently active
@@ -812,9 +802,9 @@ class ImportScanResultsView(View):
     def handle_request(
         self,
         request: HttpRequest,
-        engagement_id: Optional[int] = None,
-        product_id: Optional[int] = None,
-    ) -> Tuple[HttpRequest, dict]:
+        engagement_id: int | None = None,
+        product_id: int | None = None,
+    ) -> tuple[HttpRequest, dict]:
         """
         Process the common behaviors between request types, and then return
         the request and context dict back to be rendered
@@ -1047,8 +1037,8 @@ class ImportScanResultsView(View):
     def get(
         self,
         request: HttpRequest,
-        engagement_id: Optional[int] = None,
-        product_id: Optional[int] = None,
+        engagement_id: int | None = None,
+        product_id: int | None = None,
     ) -> HttpResponse:
         """Process GET requests for the Import View"""
         # process the request and path parameters
@@ -1063,8 +1053,8 @@ class ImportScanResultsView(View):
     def post(
         self,
         request: HttpRequest,
-        engagement_id: Optional[int] = None,
-        product_id: Optional[int] = None,
+        engagement_id: int | None = None,
+        product_id: int | None = None,
     ) -> HttpResponse:
         """Process POST requests for the Import View"""
         # process the request and path parameters
@@ -1556,8 +1546,7 @@ def get_engagements(request):
     if not url:
         msg = "Please use the export button when exporting engagements"
         raise ValidationError(msg)
-    if url.startswith("url="):
-        url = url[4:]
+    url = url.removeprefix("url=")
 
     path_items = list(filter(None, re.split(r"/|\?", url)))
 
