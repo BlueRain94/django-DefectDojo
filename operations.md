@@ -1,8 +1,8 @@
 # Dev
 - Run:
 ```
-docker compose -f docker-compose.yml -f docker-compose.override.dev.yml build
-docker compose -f docker-compose.yml -f docker-compose.override.dev.yml up -d 
+docker compose -f docker-compose.yml build
+docker compose -f docker-compose.yml up -d 
 ```
 
 - Note:
@@ -33,3 +33,20 @@ docker exec -t django-defectdojo-postgres-1 pg_dumpall -c -U defectdojo > dump_`
 
 # Restore
 cat your_dump.sql | docker exec -i django-defectdojo-postgres-1 psql -U defectdojo
+
+# Trouble shooting
+Error:
+```
+/usr/bin/env: ‘bash\r’: No such file or directory
+```
+When run on windows.
+
+```
+Change all end character to LF in .sh file in folder docker
+Rebuild all image and up
+```
+
+Recreate admin user
+```
+docker compose exec uwsgi /bin/bash -c 'python manage.py createsuperuser'
+```
