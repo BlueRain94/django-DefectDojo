@@ -1,7 +1,8 @@
 ---
 title: "Event: product_type_added"
-weight: 1
+weight: 2
 chapter: true
+exclude_search: true
 ---
 
 ## Event HTTP header

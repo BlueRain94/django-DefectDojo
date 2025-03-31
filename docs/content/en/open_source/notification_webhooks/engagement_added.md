@@ -1,7 +1,7 @@
 ---
 title: "Event: engagement_added"
-weight: 3
-chapter: true
+weight: 4
+exclude_search: true
 ---
 
 ## Event HTTP header

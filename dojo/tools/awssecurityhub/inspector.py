@@ -54,7 +54,7 @@ class Inspector:
         hosts = []
         for resource in finding.get("Resources", []):
             component_name = resource.get("Type")
-            hosts.append(Endpoint(host=f"{component_name} {resource.get('Id')}"))
+            hosts.append(Endpoint(host=f"{component_name}_{resource.get('Id')}".replace(":", "_").replace("/", "_")))
             if component_name == "AwsEcrContainerImage":
                 details = resource.get("Details", {}).get("AwsEcrContainerImage")
                 arn = resource.get("Id")
@@ -64,6 +64,7 @@ class Inspector:
                         f"Registry: {details.get('RegistryId')}",
                         f"Repository: {details.get('RepositoryName')}",
                         f"Image digest: {details.get('ImageDigest')}",
+                        f"Image tags: {','.join(details.get('ImageTags', []))}",
                     ))
                 title_suffix = f" - Image: {arn.split('/', 1)[1]}"  # repo-name/sha256:digest
             else:  # generic implementation

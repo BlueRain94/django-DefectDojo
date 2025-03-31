@@ -3,6 +3,7 @@ title: "Notifications"
 description: "DefectDojo can inform you about changes on different channels."
 draft: false
 weight: 6
+exclude_search: true
 ---
 
 ## Notifications
@@ -129,4 +130,4 @@ For more information about this behavior see the [related pull request #9699](ht
 
 ## Webhooks (experimental)
 
-DefectDojo also supports webhooks that follow the same events as other notifications (you can be notified in the same situations). Details about setup are described in [related page](../notification_webhooks/).
+DefectDojo also supports webhooks that follow the same events as other notifications (you can be notified in the same situations). Details about setup are described in [related page](../../notification_webhooks/how_to).
