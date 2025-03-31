@@ -11,6 +11,25 @@ Log Dedubg at django-defectdojo-uwsgi-1 container
 Form prossess at django-DefectDojo\dojo\forms.py
 ```
 
+- Merge master to new stable:
+```
+# Create new branch
+git checkout -b release/stable-{new-version} release/stable-{latest-version}
+
+# Pull new master
+git pull
+
+# Merge master
+git merge master
+
+# Show conflict
+git diff --name-only --diff-filter=U --relative
+
+# Exp
+git checkout -b release/stable-2.44.3 release/stable-1.0
+git merge master
+```
+
 # Prod
 ```
 git clone https://github.com/BlueRain94/django-DefectDojo.git
