@@ -723,7 +723,8 @@ class EditFinding(View):
         return get_object_or_404(Finding, id=finding_id)
 
     def get_request_response(self, finding: Finding):
-        return BurpRawRequestResponse.objects.filter(finding=finding).all()
+        # Ordered so the request_<i>/response_<i> form fields map to the same rows on GET and POST
+        return list(BurpRawRequestResponse.objects.filter(finding=finding).order_by("id"))
 
     def get_finding_form(self, request: HttpRequest, finding: Finding):
         # Get the burp request if available
@@ -884,33 +885,16 @@ class EditFinding(View):
                 )
 
     def process_burp_request_response(self, request: HttpRequest, finding: Finding, context: dict):
-        request_fields = [key for key in request.POST if key.startswith("request_")]
-        request_rr_count = len(request_fields)
+        cleaned_data = context["form"].cleaned_data
         database_rr_count = context["form"].rr_count
-        if request_rr_count > 0:
-            # Update the request/response pairs that already exist
-            burp_rr = BurpRawRequestResponse.objects.filter(finding=finding).all()
-            for i, rr in enumerate(burp_rr):
-                rr.burpRequestBase64 = base64.b64encode(
-                    context["form"].cleaned_data[f"request_{i}"].encode(),
-                )
-                rr.burpResponseBase64 = base64.b64encode(
-                    context["form"].cleaned_data[f"response_{i}"].encode(),
-                )
-                rr.clean()
-                rr.save()
-            # Create the request/response pairs added on the page
-            for i in range(request_rr_count - database_rr_count):
-                j = database_rr_count + i
-                new_rr = BurpRawRequestResponse.objects.create(finding=finding)
-                new_rr.burpRequestBase64 = base64.b64encode(
-                    request.POST[f"request_{j}"].encode(),
-                )
-                new_rr.burpResponseBase64 = base64.b64encode(
-                    request.POST[f"response_{j}"].encode(),
-                )
-                new_rr.clean()
-                new_rr.save()
+        # Update the request/response pairs that were rendered in the form (same order as get_request_response)
+        for i, rr in enumerate(self.get_request_response(finding)[:database_rr_count]):
+            rr.burpRequestBase64 = base64.b64encode(cleaned_data.get(f"request_{i}", "").encode())
+            rr.burpResponseBase64 = base64.b64encode(cleaned_data.get(f"response_{i}", "").encode())
+            rr.clean()
+            rr.save()
+        # Create the request/response pairs added on the page with "Add Request/Response"
+        finding_helper.save_request_response_pairs(request.POST, finding, start_index=database_rr_count)
 
     def process_finding_form(self, request: HttpRequest, finding: Finding, context: dict):
         if context["form"].is_valid():

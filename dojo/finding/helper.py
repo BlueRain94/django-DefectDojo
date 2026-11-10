@@ -1,3 +1,4 @@
+import base64
 import logging
 from collections import defaultdict
 from contextlib import suppress
@@ -38,6 +39,7 @@ from dojo.location.models import Location
 from dojo.location.status import FindingLocationStatus
 from dojo.location.utils import save_locations_to_add
 from dojo.models import (
+    BurpRawRequestResponse,
     Endpoint,
     Endpoint_Status,
     Engagement,
@@ -65,6 +67,37 @@ from dojo.vulnerability.manager import persist_for_finding
 
 logger = logging.getLogger(__name__)
 deduplicationLogger = logging.getLogger("dojo.specific-loggers.deduplication")
+
+
+def get_posted_request_response_indices(post_data, start_index: int = 0) -> list[int]:
+    """Return the sorted indices of the request_<i> fields posted by the finding forms, from start_index on."""
+    indices = []
+    for key in post_data:
+        suffix = key.removeprefix("request_")
+        if suffix != key and suffix.isdigit() and int(suffix) >= start_index:
+            indices.append(int(suffix))
+    return sorted(indices)
+
+
+def save_request_response_pairs(post_data, finding: Finding, start_index: int = 0) -> None:
+    """
+    Create one BurpRawRequestResponse per posted request_<i>/response_<i> pair, from start_index on.
+
+    Pairs where both the request and the response are blank are skipped, so an untouched
+    form does not leave empty request/response rows on the finding.
+    """
+    for i in get_posted_request_response_indices(post_data, start_index):
+        burp_request = post_data.get(f"request_{i}", "")
+        burp_response = post_data.get(f"response_{i}", "")
+        if not burp_request.strip() and not burp_response.strip():
+            continue
+        burp_rr = BurpRawRequestResponse(
+            finding=finding,
+            burpRequestBase64=base64.b64encode(burp_request.encode()),
+            burpResponseBase64=base64.b64encode(burp_response.encode()),
+        )
+        burp_rr.clean()
+        burp_rr.save()
 
 OPEN_FINDINGS_QUERY = Q(active=True)
 VERIFIED_FINDINGS_QUERY = Q(active=True, verified=True)

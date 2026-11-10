@@ -1,5 +1,4 @@
 # #  tests
-import base64
 import logging
 import operator
 import time
@@ -44,7 +43,6 @@ from dojo.jira import services as jira_services
 from dojo.location.feature import locations_enabled
 from dojo.location.queries import get_import_form_locations
 from dojo.models import (
-    BurpRawRequestResponse,
     Dojo_User,
     Finding,
     Finding_Group,
@@ -573,16 +571,7 @@ class AddFindingView(View):
             # Push things to jira if needed
             finding.save(push_to_jira=push_to_jira)
             # Save the burp req resp
-            request_fields = [key for key in request.POST if key.startswith("request_")]
-            request_rr_count = len(request_fields)
-            for i in range(request_rr_count):
-                burp_rr = BurpRawRequestResponse(
-                    finding=finding,
-                    burpRequestBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
-                    burpResponseBase64=base64.b64encode(request.POST[f"response_{i}"].encode()),
-                )
-                burp_rr.clean()
-                burp_rr.save()
+            finding_helper.save_request_response_pairs(request.POST, finding)
 
             # Note: this notification has not be moved to "@receiver(post_save, sender=Finding)" method as many other notifications
             # Because it could generate too much noise, we keep it here only for findings created by hand in WebUI
@@ -708,16 +697,7 @@ def add_finding_from_template(request, tid, fid):
                 else:
                     add_error_message_to_response(f"jira form validation failed: {jform.errors}")
             # Save the burp req resp
-            request_fields = [key for key in request.POST if key.startswith("request_")]
-            request_rr_count = len(request_fields)
-            for i in range(request_rr_count):
-                burp_rr = BurpRawRequestResponse(
-                    finding=new_finding,
-                    burpRequestBase64=base64.b64encode(request.POST[f"request_{i}"].encode()),
-                    burpResponseBase64=base64.b64encode(request.POST[f"response_{i}"].encode()),
-                )
-                burp_rr.clean()
-                burp_rr.save()
+            finding_helper.save_request_response_pairs(request.POST, new_finding)
             messages.add_message(request,
                                  messages.SUCCESS,
                                  _("Finding from template added successfully."),
