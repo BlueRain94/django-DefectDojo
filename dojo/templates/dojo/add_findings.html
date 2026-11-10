@@ -101,6 +101,7 @@
     {{ block.super }}
     <script type="application/javascript" src="{% static "jquery.hotkeys/jquery.hotkeys.js" %}"></script>
     <script type="application/javascript" src="{% static "easymde/dist/easymde.min.js" %}"></script>
+    <script type="application/javascript" src="{% static "dojo/js/easymde_image_upload.js" %}"></script>
     <script type="text/javascript" src="{% static "admin/js/jquery.init.js" %}"></script>
     <script type="application/javascript" src="{% static "admin/js/admin/RelatedObjectLookups.js" %}"></script>
 
@@ -130,7 +131,7 @@
             }
 
             if (elem.name != 'endpoints_to_add' && elem.name != 'vulnerability_ids' && elem.name != 'cwes' && !$(elem).hasClass('select2-search__field')) {
-                var mde = new EasyMDE({
+                var mde = new EasyMDE(Object.assign({
                     spellChecker: false,
                     inputStyle: "contenteditable",
                     element: elem,
@@ -138,11 +139,11 @@
                     forceSync: true,
                     toolbar: ["bold", "italic", "heading", "|",
                         "quote", "unordered-list", "ordered-list", "|",
-                        "link", "image", "|",
+                        "link", "image", "upload-image", "|",
                         "table", "horizontal-rule", "code", "|",
                         "guide"
                     ]
-                });
+                }, ddImageUploadOptions("{% url 'upload_finding_image' tid %}")));
                 mde.render();
             }
         });

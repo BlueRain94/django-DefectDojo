@@ -4,6 +4,7 @@ import operator
 import time
 from datetime import datetime, timedelta
 from functools import reduce
+from uuid import uuid4
 
 import pghistory
 from django.contrib import messages
@@ -11,17 +12,24 @@ from django.contrib.admin.utils import NestedObjects
 from django.core.exceptions import ValidationError
 from django.db import DEFAULT_DB_ALIAS
 from django.db.models import Count, Q
-from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import Resolver404, reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
 from django.views import View
 from django.views.decorators.cache import cache_page
+from django.views.decorators.http import require_POST
 from django.views.decorators.vary import vary_on_cookie
+from PIL import Image, UnidentifiedImageError
 
 import dojo.finding.helper as finding_helper
-from dojo.authorization.authorization import user_has_global_permission_or_403, user_has_permission_or_403
+from dojo.authorization.authorization import (
+    user_has_global_permission_or_403,
+    user_has_permission,
+    user_has_permission_or_403,
+)
+from dojo.authorization.roles_permissions import Permissions
 from dojo.endpoint.queries import get_import_form_endpoints
 from dojo.engagement.queries import get_authorized_engagements
 from dojo.finding.queries import prefetch_for_findings
@@ -44,6 +52,7 @@ from dojo.location.feature import locations_enabled
 from dojo.location.queries import get_import_form_locations
 from dojo.models import (
     Dojo_User,
+    FileUpload,
     Finding,
     Finding_Group,
     Finding_Template,
@@ -623,6 +632,56 @@ class AddFindingView(View):
         context["form_error"] = True
         # Render the form
         return render(request, self.get_template(), context)
+
+
+# Images pasted or dropped into the markdown editors of the Add / Edit Finding pages.
+# The format is detected from the content (not the file name or the browser's content type),
+# and SVG is deliberately not accepted because it can carry script.
+FINDING_IMAGE_FORMATS = {"PNG": "png", "JPEG": "jpg", "GIF": "gif", "WEBP": "webp"}
+FINDING_IMAGE_MAX_SIZE = 5 * 1024 * 1024  # 5 MB, keep in sync with easymde_image_upload.js
+
+
+@require_POST
+def upload_finding_image(request, tid):
+    """
+    Store an image for a finding's markdown fields and return the URL to embed.
+
+    The image is saved as a FileUpload attached to the Test, because the finding does not
+    exist yet on the Add Finding page. It is served through access_file, so only users who
+    can view the Test can load it.
+    """
+    test = get_object_or_404(Test, id=tid)
+    # Answer in JSON with a real 403: raising PermissionDenied would render the HTML error page
+    # (which DefectDojo serves with status 400), and the editor could not show the reason.
+    if not user_has_permission(request.user, test, Permissions.Product_Tracking_Files_Add):
+        return JsonResponse({"error": _("You are not allowed to upload images to this test.")}, status=403)
+
+    uploaded = request.FILES.get("image")
+    if uploaded is None:
+        return JsonResponse({"error": _("No image was uploaded.")}, status=400)
+    if uploaded.size > FINDING_IMAGE_MAX_SIZE:
+        return JsonResponse({"error": _("The image is larger than 5 MB.")}, status=400)
+
+    try:
+        with Image.open(uploaded) as image:
+            image_format = image.format
+            image.verify()
+    except (UnidentifiedImageError, OSError, SyntaxError, Image.DecompressionBombError):
+        return JsonResponse({"error": _("The file is not a valid image.")}, status=400)
+    extension = FINDING_IMAGE_FORMATS.get(image_format)
+    if extension is None:
+        return JsonResponse({"error": _("Only PNG, JPEG, GIF and WebP images are allowed.")}, status=400)
+
+    # Name the stored file after the detected format, never after the client-supplied name
+    uploaded.seek(0)
+    uploaded.name = f"finding-image-{uuid4().hex}.{extension}"
+    file_upload = FileUpload.objects.create(
+        title=f"Finding image {timezone.now():%Y-%m-%d %H:%M:%S} {uuid4().hex[:6]}",
+        file=uploaded,
+    )
+    test.files.add(file_upload)
+
+    return JsonResponse({"url": reverse("access_file", args=(file_upload.id, test.id, "Test"))})
 
 
 def add_finding_from_template(request, tid, fid):

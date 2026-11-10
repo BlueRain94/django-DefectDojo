@@ -99,6 +99,7 @@ def save_request_response_pairs(post_data, finding: Finding, start_index: int = 
         burp_rr.clean()
         burp_rr.save()
 
+
 OPEN_FINDINGS_QUERY = Q(active=True)
 VERIFIED_FINDINGS_QUERY = Q(active=True, verified=True)
 OUT_OF_SCOPE_FINDINGS_QUERY = Q(active=False, out_of_scope=True)
