@@ -681,7 +681,10 @@ def upload_finding_image(request, tid):
     )
     test.files.add(file_upload)
 
-    return JsonResponse({"url": reverse("access_file", args=(file_upload.id, test.id, "Test"))})
+    # The URL must end in an image extension: EasyMDE only inserts ![](url) for such URLs and
+    # falls back to a plain [link](url) otherwise, which the finding page shows as text.
+    url = reverse("access_file_named", args=(file_upload.id, test.id, "Test", f"finding-image-{file_upload.id}.{extension}"))
+    return JsonResponse({"url": url})
 
 
 def add_finding_from_template(request, tid, fid):

@@ -70,9 +70,23 @@ class TestUploadFindingImage(DojoTestCase):
         file_upload = self.test.files.get()
         self.assertEqual(
             response.json()["url"],
-            reverse("access_file", args=(file_upload.id, self.test.id, "Test")),
+            reverse("access_file_named", args=(file_upload.id, self.test.id, "Test", f"finding-image-{file_upload.id}.png")),
         )
         self.assertTrue(file_upload.file.name.endswith(".png"))
+
+    def test_url_ends_with_image_extension(self):
+        # EasyMDE embeds the upload as ![](url) only when the URL ends in an image extension;
+        # otherwise it inserts a [link](url) and the finding page shows text instead of the image.
+        response = self._upload(self.member, _image_bytes("JPEG"))
+
+        self.assertTrue(response.json()["url"].endswith(".jpg"))
+
+    def test_embedded_url_renders_as_img_on_finding_page(self):
+        from dojo.templatetags.display_tags import markdown_render  # noqa: PLC0415 -- template filter under test
+
+        url = self._upload(self.member, _image_bytes()).json()["url"]
+
+        self.assertIn(f'<img alt="" src="{url}"', str(markdown_render(f"Step 1\n![]({url})")))
 
     def test_uploaded_image_is_served_to_member(self):
         url = self._upload(self.member, _image_bytes()).json()["url"]

@@ -269,6 +269,7 @@ urlpatterns += [
     re_path(r"^robots.txt", lambda _: HttpResponse("User-Agent: *\nDisallow: /", content_type="text/plain"), name="robots_file"),
     re_path(r"^manage_files/(?P<oid>\d+)/(?P<obj_type>\w+)$", views.manage_files, name="manage_files"),
     re_path(r"^access_file/(?P<fid>\d+)/(?P<oid>\d+)/(?P<obj_type>\w+)$", views.access_file, name="access_file"),
+    re_path(r"^access_file/(?P<fid>\d+)/(?P<oid>\d+)/(?P<obj_type>\w+)/(?P<file_name>[\w.-]+)$", views.access_file, name="access_file_named"),
     re_path(r"^{}/(?P<path>.*)$".format(settings.MEDIA_URL.strip("/")), views.protected_serve, {"document_root": settings.MEDIA_ROOT}),
 ]
 
